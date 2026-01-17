@@ -4,17 +4,26 @@
 #include <windows.h>
 #include <string>
 
+#define WM_TRAYICON (WM_USER + 1)
+#define ID_TRAY_EXIT 1001
+#define ID_TRAY_SHOW 1002
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
+void ToggleAlwaysOnTop(HWND hwnd);
 
-HHOOK g_mouseHook;
+HHOOK g_hMouseHook;
 HWND g_hwnd;
 HHOOK g_hKeyboardHook;
 
 HWND hLabelX;
 HWND hLabelY;
 HWND hLabelKey;
+
+NOTIFYICONDATA nid;
+
+bool isTopMost = false;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
@@ -45,7 +54,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     ShowWindow(hwnd, nCmdShow);
 
     // Install global mouse hook
-    g_mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, NULL, 0);
+    g_hMouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, NULL, 0);
 
     // Install global keyboard hook
     g_hKeyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, GetModuleHandle(NULL), 0);
@@ -56,7 +65,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         DispatchMessage(&msg);
     }
 
-    UnhookWindowsHookEx(g_mouseHook);
+    UnhookWindowsHookEx(g_hMouseHook);
 
     return 0;
 }
@@ -67,6 +76,14 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
         case WM_CREATE:
         {
+            if (!RegisterHotKey(hwnd, 1, MOD_CONTROL | MOD_ALT, 'M')) { // Ctrl + Alt + M to toggle visibility
+                MessageBox(hwnd, L"Failed to register Ctrl+Alt+M hotkey!", L"Error", MB_ICONERROR);
+            }
+            if (!RegisterHotKey(hwnd, 2, MOD_CONTROL | MOD_ALT, 'X')) { // Ctrl + Alt + X to toggle always on top
+                MessageBox(hwnd, L"Failed to register Ctrl+Alt+X hotkey!", L"Error", MB_ICONERROR);
+            } 
+             
+
             CreateWindow(L"STATIC", L"Mouse X:",
                 WS_VISIBLE | WS_CHILD,
                 30, 40, 180, 25,
@@ -95,11 +112,84 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             hLabelKey = CreateWindow(L"STATIC", L"",
                 WS_VISIBLE | WS_CHILD | WS_BORDER,
                 200, 120, 200, 25,
-                hwnd, NULL, NULL, NULL);            
+                hwnd, NULL, NULL, NULL);        
+                
+            //TrayIcon
+            nid.cbSize = sizeof(NOTIFYICONDATA);
+            nid.hWnd = hwnd;
+            nid.uID = 1;
+            nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
+            nid.uCallbackMessage = WM_TRAYICON;
+            nid.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+            wcscpy_s(nid.szTip, L"Mouse Tracker Utility");
+
+            Shell_NotifyIcon(NIM_ADD, &nid);
         }
         break;
+        case WM_TRAYICON:
+            if(lParam == WM_LBUTTONDBLCLK) {
+                ShowWindow(hwnd, SW_SHOW);
+                SetForegroundWindow(hwnd);
+            } 
+            else if(lParam == WM_RBUTTONUP) {
+                POINT pt;
+                GetCursorPos(&pt); // cursor position
 
+                HMENU hMenu = CreatePopupMenu();
+                AppendMenu(hMenu, MF_STRING, ID_TRAY_SHOW, L"Show");
+                AppendMenu(hMenu, MF_STRING, ID_TRAY_EXIT, L"Exit");
+
+                SetForegroundWindow(hwnd); // needed to make menu show
+                TrackPopupMenu(
+                    hMenu,
+                    TPM_RIGHTBUTTON,
+                    pt.x, pt.y,
+                    0,
+                    hwnd,
+                    NULL
+                );
+
+                DestroyMenu(hMenu);
+            }
+
+            break;
+        case WM_HOTKEY:
+            if(wParam == 1) {
+                if(IsWindowVisible(hwnd)) {
+                    ShowWindow(hwnd, SW_HIDE);
+                } else {
+                    ShowWindow(hwnd, SW_SHOW);
+                    SetForegroundWindow(hwnd);    
+                }
+            }
+
+            if(wParam == 2) {
+                ToggleAlwaysOnTop(hwnd);
+            }
+
+            break;
+        case WM_COMMAND:
+            switch (LOWORD(wParam)) {
+                case ID_TRAY_SHOW:
+                    ShowWindow(hwnd, SW_SHOW);
+                    SetForegroundWindow(hwnd);
+                    break;
+                case ID_TRAY_EXIT:
+                    DestroyWindow(hwnd); // this will trigger WM_DESTROY
+                    break;
+            }
+            break;    
+        case WM_CLOSE:
+            ShowWindow(hwnd, SW_HIDE); // hides window instead of closing
+            return 0;
         case WM_DESTROY:
+            UnregisterHotKey(hwnd, 1);
+            UnregisterHotKey(hwnd, 2);
+
+            Shell_NotifyIcon(NIM_DELETE, &nid);
+            UnhookWindowsHookEx(g_hMouseHook);
+            UnhookWindowsHookEx(g_hKeyboardHook);
+
             PostQuitMessage(0);
             break;
     }
@@ -109,7 +199,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
 
-    if (nCode == HC_ACTION) {
+    if (nCode == HC_ACTION && wParam == WM_MOUSEMOVE) {
         MSLLHOOKSTRUCT* pMouse = (MSLLHOOKSTRUCT*)lParam;
 
         std::wstring xText = std::to_wstring(pMouse->pt.x);
@@ -119,7 +209,7 @@ LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
         SetWindowText(hLabelY, yText.c_str());
     }
 
-    return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
+    return CallNextHookEx(g_hMouseHook, nCode, wParam, lParam);
 }
 
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -133,4 +223,15 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         }
     }
     return CallNextHookEx(g_hKeyboardHook, nCode, wParam, lParam);
+}
+
+void ToggleAlwaysOnTop(HWND hwnd) {
+    isTopMost = !isTopMost;
+
+    SetWindowPos(
+        hwnd,
+        isTopMost ? HWND_TOPMOST : HWND_NOTOPMOST,
+        0, 0, 0, 0,
+        SWP_NOMOVE | SWP_NOSIZE
+    );
 }
