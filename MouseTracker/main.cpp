@@ -62,17 +62,17 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         );
         break;
 
-    // case WM_MOUSEMOVE: {
-    //     int x = LOWORD(lParam);
-    //     int y = HIWORD(lParam);
+    case WM_MOUSEMOVE: {
+        int x = LOWORD(lParam);
+        int y = HIWORD(lParam);
 
-    //     std::wstring textX = L"Mouse X = " + std::to_wstring(x);
-    //     std::wstring textY = L"Mouse Y = " + std::to_wstring(y);
+        std::wstring textX = L"Mouse X = " + std::to_wstring(x);
+        std::wstring textY = L"Mouse Y = " + std::to_wstring(y);
 
-    //     // SetWindowText(hLabelX, textX.c_str());
-    //     // SetWindowText(hLabelY, textY.c_str());
-    //     break;
-    //}
+        SetWindowText(hLabelX, textX.c_str());
+        SetWindowText(hLabelY, textY.c_str());
+        break;
+    }
 
     case WM_DESTROY:
         PostQuitMessage(0);
