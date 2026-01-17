@@ -5,6 +5,9 @@ g++ main.cpp -o UnitConverter.exe -lgdi32 -luser32
 OR
 g++ main.cpp -o UnitConverter.exe -DUNICODE -D_UNICODE -lgdi32 -luser32
 
+g++ main.cpp -o MouseTracker.exe -DUNICODE -D_UNICODE -mwindows -lgdi32 -luser32
+
+-mwindows to not open the console
 
 Win32 C++ decumentation:
 
