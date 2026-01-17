@@ -1,12 +1,17 @@
+#define UNICODE
+#define _UNICODE
 #include <windows.h>
 #include <string>
+
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam);
+
+HHOOK g_mouseHook;
+HWND g_hwnd;
 
 HWND hLabelX;
 HWND hLabelY;
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
-
-// Entry point
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
 
     const wchar_t CLASS_NAME[] = L"MouseTrackerWindow";
@@ -22,22 +27,29 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     HWND hwnd = CreateWindowEx(
         0,
         CLASS_NAME,
-        L"Mouse Tracker (Win32)",
+        L"Global Mouse Tracker",
         WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 300, 200,
+        CW_USEDEFAULT, CW_USEDEFAULT, 350, 200,
         NULL,
         NULL,
         hInstance,
         NULL
     );
 
+    g_hwnd = hwnd;
+
     ShowWindow(hwnd, nCmdShow);
+
+    // Install global mouse hook
+    g_mouseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseProc, NULL, 0);
 
     MSG msg = {};
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    UnhookWindowsHookEx(g_mouseHook);
 
     return 0;
 }
@@ -47,32 +59,28 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     switch (uMsg) {
 
     case WM_CREATE:
-        hLabelX = CreateWindow(
-            L"STATIC", L"Mouse X = 0",
+    {
+        CreateWindow(L"STATIC", L"Mouse X:",
             WS_VISIBLE | WS_CHILD,
-            20, 20, 200, 25,
-            hwnd, NULL, NULL, NULL
-        );
+            30, 40, 80, 25,
+            hwnd, NULL, NULL, NULL);
 
-        hLabelY = CreateWindow(
-            L"STATIC", L"Mouse Y = 0",
+        CreateWindow(L"STATIC", L"Mouse Y:",
             WS_VISIBLE | WS_CHILD,
-            20, 50, 200, 25,
-            hwnd, NULL, NULL, NULL
-        );
-        break;
+            30, 80, 80, 25,
+            hwnd, NULL, NULL, NULL);
 
-    case WM_MOUSEMOVE: {
-        int x = LOWORD(lParam);
-        int y = HIWORD(lParam);
+        hLabelX = CreateWindow(L"STATIC", L"0",
+            WS_VISIBLE | WS_CHILD | WS_BORDER,
+            120, 40, 150, 25,
+            hwnd, NULL, NULL, NULL);
 
-        std::wstring textX = L"Mouse X = " + std::to_wstring(x);
-        std::wstring textY = L"Mouse Y = " + std::to_wstring(y);
-
-        SetWindowText(hLabelX, textX.c_str());
-        SetWindowText(hLabelY, textY.c_str());
-        break;
+        hLabelY = CreateWindow(L"STATIC", L"0",
+            WS_VISIBLE | WS_CHILD | WS_BORDER,
+            120, 80, 150, 25,
+            hwnd, NULL, NULL, NULL);
     }
+    break;
 
     case WM_DESTROY:
         PostQuitMessage(0);
@@ -80,4 +88,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+LRESULT CALLBACK MouseProc(int nCode, WPARAM wParam, LPARAM lParam) {
+
+    if (nCode == HC_ACTION) {
+        MSLLHOOKSTRUCT* pMouse = (MSLLHOOKSTRUCT*)lParam;
+
+        std::wstring xText = std::to_wstring(pMouse->pt.x);
+        std::wstring yText = std::to_wstring(pMouse->pt.y);
+
+        SetWindowText(hLabelX, xText.c_str());
+        SetWindowText(hLabelY, yText.c_str());
+    }
+
+    return CallNextHookEx(g_mouseHook, nCode, wParam, lParam);
 }
