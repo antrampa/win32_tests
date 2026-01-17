@@ -32,7 +32,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
         WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
         CLASS_NAME,
         L"Global Mouse Tracker",
-        WS_OVERLAPPEDWINDOW,
+        WS_OVERLAPPEDWINDOW | WS_THICKFRAME,
         CW_USEDEFAULT, CW_USEDEFAULT, 450, 250,
         NULL,
         NULL,
@@ -65,43 +65,43 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
     switch (uMsg) {
 
-    case WM_CREATE:
-    {
-        CreateWindow(L"STATIC", L"Mouse X:",
-            WS_VISIBLE | WS_CHILD,
-            30, 40, 180, 25,
-            hwnd, NULL, NULL, NULL);
+        case WM_CREATE:
+        {
+            CreateWindow(L"STATIC", L"Mouse X:",
+                WS_VISIBLE | WS_CHILD,
+                30, 40, 180, 25,
+                hwnd, NULL, NULL, NULL);
 
-        CreateWindow(L"STATIC", L"Mouse Y:",
-            WS_VISIBLE | WS_CHILD,
-            30, 80, 180, 25,
-            hwnd, NULL, NULL, NULL);
-        
-        CreateWindow(L"STATIC", L"Keyboard Key Code:", 
-            WS_VISIBLE | WS_CHILD,
-            30, 120, 180, 25,
-            hwnd, NULL, NULL, NULL);
+            CreateWindow(L"STATIC", L"Mouse Y:",
+                WS_VISIBLE | WS_CHILD,
+                30, 80, 180, 25,
+                hwnd, NULL, NULL, NULL);
+            
+            CreateWindow(L"STATIC", L"Keyboard Key Code:", 
+                WS_VISIBLE | WS_CHILD,
+                30, 120, 180, 25,
+                hwnd, NULL, NULL, NULL);
 
-        hLabelX = CreateWindow(L"STATIC", L"0",
-            WS_VISIBLE | WS_CHILD | WS_BORDER,
-            200, 40, 200, 25,
-            hwnd, NULL, NULL, NULL);
+            hLabelX = CreateWindow(L"STATIC", L"0",
+                WS_VISIBLE | WS_CHILD | WS_BORDER,
+                200, 40, 200, 25,
+                hwnd, NULL, NULL, NULL);
 
-        hLabelY = CreateWindow(L"STATIC", L"0",
-            WS_VISIBLE | WS_CHILD | WS_BORDER,
-            200, 80, 200, 25,
-            hwnd, NULL, NULL, NULL);
+            hLabelY = CreateWindow(L"STATIC", L"0",
+                WS_VISIBLE | WS_CHILD | WS_BORDER,
+                200, 80, 200, 25,
+                hwnd, NULL, NULL, NULL);
 
-        hLabelKey = CreateWindow(L"STATIC", L"",
-            WS_VISIBLE | WS_CHILD | WS_BORDER,
-            200, 120, 200, 25,
-            hwnd, NULL, NULL, NULL);            
-    }
-    break;
-
-    case WM_DESTROY:
-        PostQuitMessage(0);
+            hLabelKey = CreateWindow(L"STATIC", L"",
+                WS_VISIBLE | WS_CHILD | WS_BORDER,
+                200, 120, 200, 25,
+                hwnd, NULL, NULL, NULL);            
+        }
         break;
+
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            break;
     }
 
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
