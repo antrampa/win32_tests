@@ -29,7 +29,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int nCmdShow) {
     RegisterClass(&wc);
 
     HWND hwnd = CreateWindowEx(
-        0,
+        WS_EX_TOPMOST | WS_EX_TOOLWINDOW,
         CLASS_NAME,
         L"Global Mouse Tracker",
         WS_OVERLAPPEDWINDOW,
